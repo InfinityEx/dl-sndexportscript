@@ -2,12 +2,17 @@
 # -*- coding: utf-8 -*-
 #Author:时无ShiWu
 #Filename:DSE.py
-#Version:1.0
+#Version:1.0 448.37
 
+from math import fabs
+import threading
+import multiprocessing
 import os
 import sys
 import csv
 import argparse
+import subprocess
+from time import sleep
 
 # 脚本默认位置
 default_path=os.path.split(os.path.realpath(__file__))[0]
@@ -22,6 +27,9 @@ osf_path=default_path+r'\osf'
 # 输出位置 
 output_path=default_path+r'\output'
 
+respond=''
+cir=0
+
 def extract_files(a,b):
 
     print(default_path,vgm_path)
@@ -31,6 +39,7 @@ def extract_files(a,b):
         fsreader=dict(csv.reader(sfs))
 
     # 序列是否存在进行判断，存在则为其创建一个文件夹
+    print(a)
     fn=fsreader.get(a,-1)
     if(fn==-1):
         print('seq not found')
@@ -40,6 +49,7 @@ def extract_files(a,b):
             os.makedirs(output_path+'\\'+fn)
     
     # 加载文件序列
+    print(fn)
     with open(seq_path+'\\'+fn+'.csv') as seqfs:
         sesreader=dict(csv.reader(seqfs))
     
@@ -54,13 +64,17 @@ def extract_files(a,b):
     # 判断只导出单个声道还是导出全部声道
     if(ib!=0):
         outname=sesreader.get(str(ib))
-        os.system(vgm_path+' -s '+str(ib)+' -o '+output_path+'\\'+fn+'\\'+outname+'.wav'+' '+osf_path+'\\'+fn+'.awb')
+        # cmd序列生成
+        subprocess.call(vgm_path+' -s '+str(ib)+' -o '+output_path+'\\'+fn+'\\'+outname+'.wav'+' '+osf_path+'\\'+fn+'.awb',bufsize=-1)
+        print('end')
     elif(ib==0):
         for i in range(1,sn):
             outname=sesreader.get(str(i))
             print(outname)
             # cmd序列生成
-            os.system(vgm_path+' -s '+str(i)+' -o '+output_path+'\\'+fn+'\\'+outname+'.wav'+' '+osf_path+'\\'+fn+'.awb')
+            subprocess.call(vgm_path+' -s '+str(i)+' -o '+output_path+'\\'+fn+'\\'+outname+'.wav'+' '+osf_path+'\\'+fn+'.awb',bufsize=-1)
+    sfs.close()
+    seqfs.close()
 
 
 if __name__=="__main__":
@@ -79,16 +93,15 @@ if __name__=="__main__":
         print("You can't run prog without <fileid>")
         parser.print_help()
         sys.exit(0)
-    
-    c=int(args.fileid)
-    d=int(args.channel)
-    if(c==0):
+
+
+    if(args.fileid=='all'):
         # 加载数据文件列表
         with open(sfs_path,'r') as psfs:
             fsreader=dict(csv.reader(psfs))
         psfi=len(fsreader)
-        for s in (1,psfi):
-            extract_files(args.fileid,args.channel)
+        for s in range(1,psfi):
+                extract_files(str(s),args.channel)    
     else:
         extract_files(args.fileid,args.channel)
 
