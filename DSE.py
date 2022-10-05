@@ -4,15 +4,12 @@
 #Filename:DSE.py
 #Version:1.0 448.37
 
-from math import fabs
-import threading
-import multiprocessing
 import os
 import sys
 import csv
+import json
 import argparse
 import subprocess
-from time import sleep
 
 # 脚本默认位置
 default_path=os.path.split(os.path.realpath(__file__))[0]
@@ -45,16 +42,10 @@ def extract_files(a,b):
         print('seq not found')
         sys.exit(0)
     else:
-        if not (os.path.exists(output_path+'\\'+fn)):
-            os.makedirs(output_path+'\\'+fn)
+        # Reference from sh0wer1ee/DLStories
+        if not (os.path.exists(f'{output_path}/{fn}')):
+            os.makedirs(f'{output_path}/{fn}')
     
-    # 加载文件序列
-    print(fn)
-    with open(seq_path+'\\'+fn+'.csv') as seqfs:
-        sesreader=dict(csv.reader(seqfs))
-    
-    sn=len(sesreader)
-    # print(sn,type(sn),int(b),type(int(b)))
     try:
         ib=int(b)
     except:
@@ -62,27 +53,47 @@ def extract_files(a,b):
         sys.exit(0)
 
     # 判断只导出单个声道还是导出全部声道
+    # Reference from sh0wer1ee/DLStories（20221005）
+    acbjson={}
+    seqjson={}
+    sn=0
+    yb=str(ib)
+    acbjson=json.loads(subprocess.check_output(f'{vgm_path} -s {yb} -I -m {osf_path}/{fn}.awb'))
+    sn=acbjson['streamInfo']['total']
+    sstr=''
+
     if(ib!=0):
-        outname=sesreader.get(str(ib))
+        outname=acbjson['streamInfo']['name']
+        if(ib < sn):
         # cmd序列生成
-        subprocess.call(vgm_path+' -s '+str(ib)+' -o '+output_path+'\\'+fn+'\\'+outname+'.wav'+' '+osf_path+'\\'+fn+'.awb',bufsize=-1)
-        print('end')
+            # subprocess.check_output(f'{vgm_path} -s {yb} -i -o {output_path}/{fn}/{outname}.wav {osf_path}/{fn}.awb').decode('utf-8')
+            subprocess.check_call(f'{vgm_path} -s {yb} -i -o {output_path}/{fn}/{outname}.wav {osf_path}/{fn}.awb',bufsize=-1)
+        else:
+            print('channel id not in awb file')
+        print(f'{outname}')
+        print(sstr)
     elif(ib==0):
         for i in range(1,sn):
-            outname=sesreader.get(str(i))
+            y=str(i)
+            seqjson=json.loads(subprocess.check_output(f'{vgm_path} -s {y} -I -m {osf_path}/{fn}.awb'))
+            outname=seqjson['streamInfo']['name']
             print(outname)
+            wav='.wav'
+            awb='.awb'
             # cmd序列生成
-            subprocess.call(vgm_path+' -s '+str(i)+' -o '+output_path+'\\'+fn+'\\'+outname+'.wav'+' '+osf_path+'\\'+fn+'.awb',bufsize=-1)
+            # subprocess.check_output(f'{vgm_path} -s {y} -i -o {output_path}/{fn}/{outname}{wav} {osf_path}/{fn}{awb}').decode('utf-8')
+            subprocess.check_call(f'{vgm_path} -s {y} -o {output_path}/{fn}/{outname}.wav {osf_path}/{fn}.awb',bufsize=-1)
+            print(f'{outname}')
     sfs.close()
-    seqfs.close()
-
 
 if __name__=="__main__":
     # parser settings
-    parser = argparse.ArgumentParser(prog='python dse.py',usage='%(prog)s [--fileid] <file_id> ([--channel] <channel_id>)',description="Python Program for Extract Sound Files")
-    parser.add_argument('--fileid',default='empty',nargs='?',help='extract file from filelist sequence')
-    parser.add_argument('--channel',default=0,nargs='?',help='extract channel N from file channels,set 0 or empty extract all single channel')
-    
+    parser = argparse.ArgumentParser(prog='python dse.py',usage='%(prog)s [-fileid] <file_id> ([-channel] <channel_id> [-ow <int>])',description="Python Program for Extract Sound Files")
+    parser.add_argument('-fileid',default='empty',nargs='?',help='extract file from filelist sequence')
+    parser.add_argument('-channel',default=0,nargs='?',help='extract channel N from file channels,set 0 or empty extract all single channel')
+    parser.add_argument('-ow',default=0,nargs='?',help="""<unavailable> selected set 1 allow export file overwrite,
+    default or set 0 refuse overwrite.""")
+
     # merge parser
     args = parser.parse_args()
     
@@ -90,7 +101,7 @@ if __name__=="__main__":
     # parser.print_help()
 
     if(args.fileid=='empty'):
-        print("You can't run prog without <fileid>")
+        print("You can't run prog without <fileid>\n")
         parser.print_help()
         sys.exit(0)
 
@@ -104,13 +115,3 @@ if __name__=="__main__":
                 extract_files(str(s),args.channel)    
     else:
         extract_files(args.fileid,args.channel)
-
-    # debug
-    print(args.fileid)
-    if(args.fileid==0):
-        print('extract all')
-        print("now command: dse.py "+"--fileid "+str(args.fileid)+" --channel "+str(args.channel))
-        print(type(args.fileid))
-    else:
-        print(type(args.fileid[0]))
-        print("now command: dse.py "+"--fileid "+str(args.fileid)+" --channel "+str(args.channel))
