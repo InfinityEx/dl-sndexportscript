@@ -7,6 +7,7 @@
 import os
 import sys
 import csv
+import time
 import json
 import argparse
 import subprocess
@@ -58,7 +59,10 @@ def extract_files(a,b):
     seqjson={}
     sn=0
     yb=str(ib)
-    acbjson=json.loads(subprocess.check_output(f'{vgm_path} -s {yb} -I -m {osf_path}/{fn}.awb'))
+    if os.path.exists(f'{osf_path}/{fn}.awb')==True and os.path.exists(f'{osf_path}/{fn}.acb')==True:
+        acbjson=json.loads(subprocess.check_output(f'{vgm_path} -s {yb} -I -m {osf_path}/{fn}.awb'))
+    elif os.path.exists(f'{osf_path}/{fn}.awb')==False and os.path.exists(f'{osf_path}/{fn}.acb')==True:
+        acbjson=json.loads(subprocess.check_output(f'{vgm_path} -s {yb} -I -m {osf_path}/{fn}.acb'))
     sn=acbjson['streamInfo']['total']
     sstr=''
 
@@ -70,26 +74,35 @@ def extract_files(a,b):
             subprocess.check_call(f'{vgm_path} -s {yb} -i -o {output_path}/{fn}/{outname}.wav {osf_path}/{fn}.awb',bufsize=-1)
         else:
             print('channel id not in awb file')
-        print(f'{outname}')
-        print(sstr)
+        # print(f'{outname}')
+        # print(sstr)
     elif(ib==0):
-        for i in range(1,sn):
+        for i in range(0,sn):
             y=str(i)
-            seqjson=json.loads(subprocess.check_output(f'{vgm_path} -s {y} -I -m {osf_path}/{fn}.awb'))
+            if os.path.exists(f'{osf_path}/{fn}.awb')==True and os.path.exists(f'{osf_path}/{fn}.acb')==True:
+                seqjson=json.loads(subprocess.check_output(f'{vgm_path} -s {y} -I -m {osf_path}/{fn}.awb'))
+            elif os.path.exists(f'{osf_path}/{fn}.awb')==False and os.path.exists(f'{osf_path}/{fn}.acb')==True:
+                seqjson=json.loads(subprocess.check_output(f'{vgm_path} -s {y} -I -m {osf_path}/{fn}.acb'))
             outname=seqjson['streamInfo']['name']
-            print(outname)
-            wav='.wav'
-            awb='.awb'
+            # print(outname)
+            # wav='.wav'
+            # awb='.awb'
             # cmd序列生成
             # subprocess.check_output(f'{vgm_path} -s {y} -i -o {output_path}/{fn}/{outname}{wav} {osf_path}/{fn}{awb}').decode('utf-8')
-            subprocess.check_call(f'{vgm_path} -s {y} -o {output_path}/{fn}/{outname}.wav {osf_path}/{fn}.awb',bufsize=-1)
+            if os.path.exists(f'{osf_path}/{fn}.awb')==True and os.path.exists(f'{osf_path}/{fn}.acb')==True:
+                subprocess.check_call(f'{vgm_path} -s {y} -o {output_path}/{fn}/{outname}.wav {osf_path}/{fn}.awb',bufsize=-2)
+            elif os.path.exists(f'{osf_path}/{fn}.awb')==False and os.path.exists(f'{osf_path}/{fn}.acb')==True:
+                subprocess.check_call(f'{vgm_path} -s {y} -o {output_path}/{fn}/{outname}.wav {osf_path}/{fn}.acb',bufsize=-2)
             print(f'{outname}')
     sfs.close()
+    time.sleep(1)
+    
 
 if __name__=="__main__":
     # parser settings
-    parser = argparse.ArgumentParser(prog='python dse.py',usage='%(prog)s [-fileid] <file_id> ([-channel] <channel_id> [-ow <int>])',description="Python Program for Extract Sound Files")
+    parser = argparse.ArgumentParser(prog='python dse.py',usage='%(prog)s [-fileid] <file_id> [-seqfile] <seqfile> ([-channel] <channel_id> [-ow <int>])',description="Python Program for Extract Sound Files")
     parser.add_argument('-fileid',default='empty',nargs='?',help='extract file from filelist sequence')
+    parser.add_argument('-seqfile',default=sfs_path,nargs='?',help='specify a file instead of default sequence')
     parser.add_argument('-channel',default=0,nargs='?',help='extract channel N from file channels,set 0 or empty extract all single channel')
     parser.add_argument('-ow',default=0,nargs='?',help="""<unavailable> selected set 1 allow export file overwrite,
     default or set 0 refuse overwrite.""")
@@ -108,10 +121,18 @@ if __name__=="__main__":
 
     if(args.fileid=='all'):
         # 加载数据文件列表
-        with open(sfs_path,'r') as psfs:
-            fsreader=dict(csv.reader(psfs))
-        psfi=len(fsreader)
-        for s in range(1,psfi):
-                extract_files(str(s),args.channel)    
+        if(args.seqfile==sfs_path):
+            with open(sfs_path,'r') as psfs:
+                fsreader=dict(csv.reader(psfs))
+            psfi=len(fsreader)
+            for s in range(1,psfi):
+                    extract_files(str(s),args.channel) 
+        else:
+            sfs_path=default_path+"\\"+str(args.seqfile)
+            with open(sfs_path,'r') as psfs:
+                fsreader=dict(csv.reader(psfs))
+            psfi=len(fsreader)
+            for s in range(1,psfi):
+                    extract_files(str(s),args.channel) 
     else:
         extract_files(args.fileid,args.channel)
