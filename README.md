@@ -18,6 +18,12 @@ vgmstream导出音频文件命令如下：
 
 
 
+### awb与acb文件区分判断
+
+如果音频文件同时存在awb和acb文件，音频及音频流信息往往在awb文件中，若只存在acb文件，则音频及音频流信息皆在acb文件中
+
+
+
 ### 脚本用法
 
 ```python
@@ -33,3 +39,10 @@ optional arguments:
   -ow [OW]            <unavailable> selected set 1 allow export file overwrite, default or set 0 refuse overwrite.
 ```
 
+`-fileid` :要解压出来序列文件中的id
+
+`-seqfile`:指定一个存储的序列文件(默认为soundfile_seq.csv)
+
+`-channel`:指定一个音频文件的channel所属id来导出，设为0或不填默认导出所有channel的音频
+
+`-ow`:**<暂不可用>**是否覆盖读写
